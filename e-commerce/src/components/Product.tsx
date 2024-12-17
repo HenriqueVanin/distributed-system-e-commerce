@@ -1,15 +1,12 @@
-interface ProductProps {
-  title: string;
-  imgSrc: string;
-  price: string;
-}
+import useProductStore, { ProductProps } from "../store/product.store";
 
-export default function Product({ title, imgSrc, price }: ProductProps) {
+export default function Product({ title, imgSrc, price, id }: ProductProps) {
+  const {addProductIntoCart} = useProductStore()
   return (
-    <div className="card w-96 shadow-xl h-56 bg-blue-950">
-      <figure>
+    <div className="card w-96 shadow-xl h-72 bg-blue-950 bg-opacity-20">
+      <figure className="h-40 min-h-40">
         <img
-          height={"500px"}
+          height={400}
           src={imgSrc}
         />
       </figure>
@@ -20,7 +17,7 @@ export default function Product({ title, imgSrc, price }: ProductProps) {
             <p>Ȼ {price}</p>
           </div>
         </h2>
-        <button className="btn">Add to Cart</button>
+        <button className="btn" onClick={() => addProductIntoCart({title, imgSrc, price, id})}>Add to Cart</button>
       </div>
     </div>
   );
