@@ -6,13 +6,11 @@ interface ProductProps {
 
 export default function Product({ title, imgSrc, price }: ProductProps) {
   return (
-    <div className="card w-96 shadow-xl bg-blue-950">
+    <div className="card w-96 shadow-xl h-56 bg-blue-950">
       <figure>
         <img
-          height={500}
+          height={"500px"}
           src={imgSrc}
-          alt="Shoes"
-          className="overflow-hidden"
         />
       </figure>
       <div className="card-body">
@@ -22,7 +20,7 @@ export default function Product({ title, imgSrc, price }: ProductProps) {
             <p>Ȼ {price}</p>
           </div>
         </h2>
-        <button className="btn">Buy</button>
+        <button className="btn">Add to Cart</button>
       </div>
     </div>
   );

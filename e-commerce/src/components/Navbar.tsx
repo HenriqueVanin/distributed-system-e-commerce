@@ -1,10 +1,15 @@
+import { useNavigate } from "react-router-dom";
+import Messenger from "./Messenger";
+
 export default function Navbar() {
+  const navigate = useNavigate();
   return (
     <div className="navbar bg-base-100">
       <div className="flex-1">
         <a className="btn btn-ghost text-xl">Rockets</a>
       </div>
       <div className="flex-none">
+        <Messenger />
         <div className="dropdown dropdown-end">
           <div tabIndex={0} role="button" className="btn btn-ghost btn-circle">
             <div className="indicator">
@@ -33,7 +38,12 @@ export default function Navbar() {
               <span className="text-lg font-bold">8 Items</span>
               <span className="text-info">Subtotal: $999</span>
               <div className="card-actions">
-                <button className="btn btn-primary btn-block">View cart</button>
+                <button
+                  className="btn btn-primary btn-block"
+                  onClick={() => navigate("/cart")}
+                >
+                  View cart
+                </button>
               </div>
             </div>
           </div>
