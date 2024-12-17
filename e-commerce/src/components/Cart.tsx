@@ -1,10 +1,13 @@
 import React from "react";
 import useProductStore, { ProductProps } from "../store/product.store";
-
+import { useNavigate } from "react-router-dom";
+import { useProduct } from "../hooks/product.hook";
 
 const Cart: React.FC = () => {
-  const {productsAtCart, removeProductFromCart} = useProductStore()
-
+  const { productsAtCart, removeProductFromCart, handleQuantityChange } =
+    useProductStore();
+  const { calculateTotalPrice } = useProduct();
+  const navigate = useNavigate();
   // const handleQuantityChange = (id: number, quantity: number) => {
   //   setCart((prevCart) =>
   //     prevCart.map((item) =>
@@ -14,54 +17,56 @@ const Cart: React.FC = () => {
   // };
 
   const handleRemoveItem = (product: ProductProps) => {
-    removeProductFromCart(product)
+    removeProductFromCart(product);
   };
 
-  const calculateTotal = () => {
-    return productsAtCart
-    .map((item) => Number(item.price)) // Converte 'price' para string e depois para número
-    .reduce((sum, price) => sum + price, 0); // Soma os valores
-};
-
-
   return (
-    <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">Shopping Cart</h1>
-
-      <div className="flex gap-4">
+    <div className="grid w-[600px] flex-grow mx-auto p-4">
+      <div className="grid gap-4 flex-grow h-full items-start">
         {productsAtCart.map((product: ProductProps) => (
           <div
             key={product.id}
-            className="card bg-base-100 shadow-md p-4 flex justify-between items-center"
+            className="w-full items-center bg-base-100 shadow-md p-4 flex justify-between items-center"
           >
-            <div className="flex">
-              <h2 className="text-lg font-semibold">{product.title}</h2>
-              <p className="text-sm text-gray-500">${product.price}</p>
-            </div>
-            <div className="flex items-center gap-2">
-              <input
-                type="number"
-                min="1"
-                value={product.quantity}
-                onChange={(e) =>
-                  handleQuantityChange(product.id, parseInt(e.target.value))
-                }
-                className="input input-bordered w-16 text-center"
-              />
-              <button
-                onClick={() => handleRemoveItem(product)}
-                className="btn btn-error btn-sm"
-              >
-                Remove
-              </button>
+            <div className="flex w-full items-center justify-between gap-2">
+              <div className="grid">
+                <h2 className="text-lg font-semibold">{product.title}</h2>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  min="1"
+                  value={product.quantity}
+                  onChange={(e) =>
+                    handleQuantityChange(product, parseInt(e.target.value))
+                  }
+                  className="input input-bordered w-16 text-center"
+                />
+                <p className="w-24 justify-end flex text-lg text-secondary font-semibold">
+                  ${product.price}
+                </p>
+
+                <button
+                  onClick={() => handleRemoveItem(product)}
+                  className="btn btn-error btn-sm"
+                >
+                  Remove
+                </button>
+              </div>
             </div>
           </div>
         ))}
       </div>
-
       <div className="mt-6">
-        <h2 className="text-xl font-semibold">Total: ${calculateTotal()}</h2>
-        <button className="btn btn-primary mt-4">Checkout</button>
+        <h2 className="text-xl font-semibold">
+          Total: ${calculateTotalPrice()}
+        </h2>
+        <button
+          className="btn btn-primary mt-4"
+          onClick={() => navigate("/checkout")}
+        >
+          Checkout
+        </button>
       </div>
     </div>
   );

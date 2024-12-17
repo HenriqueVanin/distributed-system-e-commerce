@@ -1,25 +1,24 @@
 import { useNavigate } from "react-router-dom";
 import Messenger from "./Messenger";
-import useProductStore, { ProductProps } from "../store/product.store";
+import useProductStore from "../store/product.store";
+import { useToast } from "../hooks/toast.hook";
+import { useProduct } from "../hooks/product.hook";
 
 export default function Navbar() {
-  const {productsAtCart} = useProductStore()
+  const {clearCart} = useProductStore()
+  const {triggerToast} = useToast();
+  const {calculateTotalQuantity, calculateTotalPrice} = useProduct();
   const navigate = useNavigate();
-   const calculateTotalPrice = (): number => {
-    return productsAtCart
-      .map((item) => Number(item.price)) // Converte 'price' para string e depois para número
-      .reduce((sum, price) => sum + price, 0); // Soma os valores
-  };
-  
+ 
   return (
     <div className="navbar bg-base-100">
-      <div className="flex-1">
+      <div className="flex-1" onClick={() => navigate("/")}>
         <a className="btn btn-ghost text-xl">Rockets</a>
       </div>
-      <div className="flex-none">
+      <div className="flex gap-4">
         <Messenger />
         <div className="dropdown dropdown-end">
-          <div tabIndex={0} role="button" className="btn btn-ghost btn-circle">
+          <div tabIndex={0} role="button" className="btn btn-ghost btn-circle btn-sm">
             <div className="indicator">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -35,7 +34,7 @@ export default function Navbar() {
                   d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"
                 />
               </svg>
-              <span className="badge badge-sm indicator-item">{productsAtCart.length}</span>
+              <span className="badge badge-sm indicator-item badge-secondary">{calculateTotalQuantity()}</span>
             </div>
           </div>
           <div
@@ -43,7 +42,7 @@ export default function Navbar() {
             className="card card-compact dropdown-content bg-base-100 z-[1] mt-3 w-52 shadow"
           >
             <div className="card-body">
-              <span className="text-lg font-bold">{productsAtCart.length} Items</span>
+              <span className="text-lg font-bold">{calculateTotalQuantity()} Items</span>
               <span className="text-info">Subtotal: ${calculateTotalPrice()}</span>
               <div className="card-actions">
                 <button
@@ -51,6 +50,12 @@ export default function Navbar() {
                   onClick={() => navigate("/cart")}
                 >
                   View cart
+                </button>
+                <button
+                  className="btn btn-primary btn-block"
+                  onClick={() => {clearCart(); triggerToast("Cart cleared")}}
+                >
+                  Clear cart
                 </button>
               </div>
             </div>

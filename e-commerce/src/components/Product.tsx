@@ -1,9 +1,11 @@
 import useProductStore, { ProductProps } from "../store/product.store";
+import { useToast } from "../hooks/toast.hook";
 
-export default function Product({ title, imgSrc, price, id }: ProductProps) {
+export default function Product({ title, imgSrc, price, id}: ProductProps) {
   const {addProductIntoCart} = useProductStore()
+  const {triggerToast} = useToast()
   return (
-    <div className="card w-96 shadow-xl h-72 bg-blue-950 bg-opacity-20">
+    <div className="card w-96 shadow-xl h-72 bg-blue-950 bg-opacity-20 rounded-md">
       <figure className="h-40 min-h-40">
         <img
           height={400}
@@ -17,7 +19,13 @@ export default function Product({ title, imgSrc, price, id }: ProductProps) {
             <p>Ȼ {price}</p>
           </div>
         </h2>
-        <button className="btn" onClick={() => addProductIntoCart({title, imgSrc, price, id})}>Add to Cart</button>
+        <button className="btn" onClick={() => 
+        {
+          addProductIntoCart({title, imgSrc, price, id, quantity: 1}); 
+          triggerToast(title + " added to cart");
+        }}>
+        Add to Cart
+        </button>
       </div>
     </div>
   );

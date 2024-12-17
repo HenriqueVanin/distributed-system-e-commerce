@@ -33,10 +33,10 @@ const Messenger: React.FC = () => {
 
   return (
        <div className="dropdown dropdown-end">
-          <div tabIndex={0} role="button" className="btn btn-ghost btn-circle">
+          <div tabIndex={0} role="button" className="btn btn-ghost btn-circle btn-sm">
             <div className="indicator">
               <MdNotifications className='text-xl' />
-              <span className="badge badge-sm indicator-item">{messages?.length}</span>
+              <span className="badge badge-sm indicator-item badge-secondary">{messages?.length}</span>
             </div>
           </div>
           <div
