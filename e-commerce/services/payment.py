@@ -9,7 +9,7 @@ import json
 # mensageria = {"Pagamentos_Aprovados": [], "Pagamentos_Recusados": []}
 
 class PagamentoWebhook(BaseModel):
-    pedido_id: str
+    request_id: str
     status: str  # "aprovado" ou "recusado"
 
 app = Flask(__name__)
@@ -30,41 +30,41 @@ def publish_event(topic, message):
     )
     print(f"Evento publicado em {topic}: {message}")
 
-# Callback para processar mensagens da fila Pedidos_Criados
-def on_pedido_criado(ch, method, properties, body):
-    pedido = json.loads(body)
-    print(f"Pedido recebido: {pedido}")
+# Callback para processar mensagens da fila requests_Criados
+def on_created_request(ch, method, properties, body):
+    request = json.loads(body)
+    print(f"request recebido: {request}")
 
-    if pedido.status == 'aprovado':
-        publish_event('Pagamentos_Aprovados', pedido)
+    if request.status == 'aprovado':
+        publish_event('Pagamentos_Aprovados', request)
     else:
-        publish_event('Pagamentos_Recusados', pedido)
+        publish_event('Pagamentos_Recusados', request)
 
     # Confirma o processamento da mensagem
     ch.basic_ack(delivery_tag=method.delivery_tag)
 
-# Consumidor para a fila Pedidos_Criados
-def consume_pedidos_criados():
+# Consumidor para a fila requests_Criados
+def consume_created_requests():
     channel = get_channel()
 
-    # Declara a fila Pedidos_Criados
-    channel.queue_declare(queue='Pedidos_Criados')
+    # Declara a fila requests_Criados
+    channel.queue_declare(queue='requests_Criados')
 
     # Configura o consumidor
-    channel.basic_consume(queue='Pedidos_Criados', on_message_callback=on_pedido_criado)
+    channel.basic_consume(queue='requests_Criados', on_message_callback=on_created_request)
 
-    print('Esperando por pedidos criados...')
+    print('Esperando por requests criados...')
     channel.start_consuming()
 
 # Endpoint para o webhook de pagamento
-@app.route('/webhook_pagamento', methods=['POST'])
-async def webhook_pagamento():
-    pagamento = request.json
-    if pagamento['status'] == 'aprovado':
-        publish_event('Pagamentos_Aprovados', pagamento)
+@app.route('/webhook_payment', methods=['POST'])
+async def webhook_payment():
+    payment = request.json
+    if payment['status'] == 'aprovado':
+        publish_event('Pagamentos_Aprovados', payment)
         return 'Pagamento processado', 200
-    elif pagamento['status'] == 'recusado':
-        publish_event('Pagamentos_Recusados', pagamento)
+    elif payment['status'] == 'recusado':
+        publish_event('Pagamentos_Recusados', payment)
         return 'Pagamento processado', 200
     else:
         return 'Pagamento não processado', 400
@@ -72,7 +72,7 @@ async def webhook_pagamento():
 if __name__ == '__main__':
     # Iniciar o consumidor em um thread separado
     import threading
-    threading.Thread(target=consume_pedidos_criados, daemon=True).start()
+    threading.Thread(target=consume_created_requests, daemon=True).start()
 
     # Iniciar o Flask
     app.run(debug=True)

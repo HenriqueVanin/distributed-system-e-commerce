@@ -1,4 +1,3 @@
-from fastapi import FastAPI
 from pydantic import BaseModel
 import asyncio
 import pika
@@ -7,42 +6,42 @@ import json
 app = FastAPI()
 
 # Simulação de mensagens publicadas em um sistema de mensageria
-# mensageria = {"Pedidos_Enviados": []}
+# mensageria = {"requests_Enviados": []}
 # fila_pagamentos_aprovados = []
 
-class PedidoEntrega(BaseModel):
-    pedido_id: str
+class requestEntrega(BaseModel):
+    request_id: str
 
-def on_pagamento_aprovado(ch, method, properties, body):
+def on_aproved_payment(ch, method, properties, body):
     pagamento = json.loads(body)
     print(f"Pagamento aprovado: {pagamento}")
     
-    # Simula a emissão de nota e envio do pedido
-    pedido_enviado = {
-        "pedido_id": pagamento['pedido_id'],
+    # Simula a emissão de nota e envio do request
+    sent_request = {
+        "request_id": pagamento['request_id'],
         "status": "enviado",
-        "nota_fiscal": f"NF-{pagamento['pedido_id']}"
+        "nota_fiscal": f"NF-{pagamento['request_id']}"
     }
 
-    # Publica no tópico Pedidos_Enviados
+    # Publica no tópico requests_Enviados
     connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
     channel = connection.channel()
 
-    channel.exchange_declare(exchange='Pedidos_Enviados', exchange_type='fanout')
+    channel.exchange_declare(exchange='requests_Enviados', exchange_type='fanout')
 
     # Publica o evento
     channel.basic_publish(
-        exchange='Pedidos_Enviados',
+        exchange='requests_Enviados',
         routing_key='',
-        body=json.dumps(pedido_enviado)
+        body=json.dumps(sent_request)
     )
 
-    print(f"Pedido enviado: {pedido_enviado}")
+    print(f"request enviado: {sent_request}")
 
     # Confirma o processamento da mensagem
     ch.basic_ack(delivery_tag=method.delivery_tag)
 
-def consume_pagamento_aprovado():
+def consume_aproved_payment():
     connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
     channel = connection.channel()
 
@@ -50,11 +49,11 @@ def consume_pagamento_aprovado():
     channel.queue_declare(queue='Pagamentos_Aprovados')
 
     # Configura o consumidor
-    channel.basic_consume(queue='Pagamentos_Aprovados', on_message_callback=on_pagamento_aprovado)
+    channel.basic_consume(queue='Pagamentos_Aprovados', on_message_callback=on_aproved_payment)
 
     print('Esperando por pagamentos aprovados...')
     channel.start_consuming()
 
-consume_pagamento_aprovado()
+consume_aproved_payment()
 
 
