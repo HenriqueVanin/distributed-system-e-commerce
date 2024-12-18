@@ -1,7 +1,7 @@
-import React from "react";
-import useProductStore, { ProductProps } from "../store/product.store";
+import useProductStore from "../store/product.store";
 import { useNavigate } from "react-router-dom";
 import { useProduct } from "../hooks/product.hook";
+import { Product } from "../service/types";
 
 const Cart: React.FC = () => {
   const { productsAtCart, removeProductFromCart, handleQuantityChange } =
@@ -16,21 +16,21 @@ const Cart: React.FC = () => {
   //   );
   // };
 
-  const handleRemoveItem = (product: ProductProps) => {
+  const handleRemoveItem = (product: Product) => {
     removeProductFromCart(product);
   };
 
   return (
     <div className="grid w-[600px] flex-grow mx-auto p-4">
       <div className="grid gap-4 flex-grow h-full items-start">
-        {productsAtCart.map((product: ProductProps) => (
+        {productsAtCart.map((product: Product) => (
           <div
             key={product.id}
-            className="w-full items-center bg-base-100 shadow-md p-4 flex justify-between items-center"
+            className="w-full bg-base-100 shadow-md p-4 flex justify-between items-center"
           >
             <div className="flex w-full items-center justify-between gap-2">
               <div className="grid">
-                <h2 className="text-lg font-semibold">{product.title}</h2>
+                <h2 className="text-lg font-semibold">{product.name}</h2>
               </div>
               <div className="flex items-center gap-2">
                 <input

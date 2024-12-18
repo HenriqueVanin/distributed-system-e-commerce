@@ -1,50 +1,74 @@
-from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import asyncio
+import pika
+import json
+storage_bp = Blueprint("storage", __name__)
 
-app = FastAPI()
 
-# Simulação de tópicos de mensageria
-mensageria = {"Pedidos_Criados": [], "Pedidos_Excluídos": []}
+# # Simulação de tópicos de mensageria
+# mensageria = {"requests_Criados": [], "requests_Excluídos": []}
 
 # Banco de dados simulado de estoque
-estoque_db = {
-    "produto_1": 100,
-    "produto_2": 50,
-    "produto_3": 75
-}
+
+storage_db = [{id: "fennec", "title": "Fennec", "price": 800, "imgSrc": "../assets/fennec.jpg", "quantity": 5},
+              {id: "octane", "title": "Octane", "price": 10, "imgSrc": "../assets/octane.jpg", "quantity": 15},
+              {id: "merc", "title": "Merc", "price": 300, "imgSrc": "../assets/merc.jpg", "quantity": 100},
+              {id: "shokunin", "title": "Shokunin", "price": 1000, "imgSrc": "../assets/shokunin.jpg", "quantity": 55}]
 
 # Modelos de dados
-class Pedido(BaseModel):
-    pedido_id: str
-    itens: list  # [{"produto_id": "produto_1", "quantidade": 2}, ...]
+class request(BaseModel):
+    request_id: str
+    itens: list  # [{"product_id": "produto_1", "quantity": 2}, ...]
 
-@app.post("/eventos/pedido-criado")
-async def atualizar_estoque_criado(pedido: Pedido):
-    for item in pedido.itens:
-        produto_id = item["produto_id"]
-        quantidade = item["quantidade"]
-        if produto_id not in estoque_db or estoque_db[produto_id] < quantidade:
+def on_created_request(ch, method, properties, body):
+    request = json.loads(body)
+    for item in request.itens:
+        product_id = item["product_id"]
+        quantity = item["quantity"]
+        if product_id not in storage_db or storage_db[product_id] < quantity:
             raise HTTPException(status_code=400, detail="Estoque insuficiente")
-        estoque_db[produto_id] -= quantidade
-    mensageria["Pedidos_Criados"].append(pedido.dict())
-    return {"message": "Estoque atualizado para pedido criado"}
+        storage_db[product_id] -= quantity
 
-@app.post("/eventos/pedido-excluido")
-async def atualizar_estoque_excluido(pedido: Pedido):
-    for item in pedido.itens:
-        produto_id = item["produto_id"]
-        quantidade = item["quantidade"]
-        if produto_id not in estoque_db:
+    print(f"request excluído: {request}")
+    ch.basic_ack(delivery_tag=method.delivery_tag)
+
+def on_removed_request(ch, method, properties, body):
+    request = json.loads(body)
+    for item in request.itens:
+        product_id = item["product_id"]
+        quantity = item["quantity"]
+        if product_id not in storage_db:
             raise HTTPException(status_code=404, detail="Produto não encontrado no estoque")
-        estoque_db[produto_id] += quantidade
-    mensageria["Pedidos_Excluídos"].append(pedido.dict())
-    return {"message": "Estoque restaurado para pedido excluído"}
+        storage_db[product_id] += quantity
+    print(f"request excluído: {request}")
+    ch.basic_ack(delivery_tag=method.delivery_tag)
 
-@app.get("/estoque")
-async def consultar_estoque():
-    return estoque_db
+def consume_requests():
+    try:
+        # Conexão com o RabbitMQ
+        connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
+        channel = connection.channel()
 
-@app.get("/mensageria")
-async def consultar_mensageria():
-    return mensageria
+        # Declaração das filas
+        channel.queue_declare(queue='requests_Criados', durable=True)
+        channel.queue_declare(queue='requests_Excluidos', durable=True)
+
+        # Configuração de consumo
+        channel.basic_consume(queue='requests_Criados', on_message_callback=on_created_request)
+        channel.basic_consume(queue='requests_Excluidos', on_message_callback=on_removed_request)
+
+        print('Esperando por requests...')
+        channel.start_consuming()
+    except KeyboardInterrupt:
+        print("Encerrando consumidor...")
+        if 'connection' in locals():
+            connection.close()
+
+@app.get("/check_storage")
+async def check_storage():
+    """
+    Rota para consultar o estoque.
+    """
+    return storage_db
+
+consume_requests()
