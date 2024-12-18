@@ -2,6 +2,7 @@ from pydantic import BaseModel
 import asyncio
 import pika
 import json
+storage_bp = Blueprint("storage", __name__)
 
 
 # # Simulação de tópicos de mensageria
