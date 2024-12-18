@@ -9,7 +9,7 @@ import threading
 app = Flask(__name__)
 
 # Banco de dados simulado
-products = [{id: "produto_1", "name": "Produto 1", "price": 100}, {"name": "Produto 2", "price": 200}]
+cart = []
 requests = []
 
 # Configuração do RabbitMQ
@@ -78,7 +78,7 @@ def list_products():
     """
     Rota para listar products.
     """
-    return jsonify(products)
+    return jsonify(cart)
 
 @app.route('/products', methods=['POST'])
 def create_product():
@@ -89,13 +89,13 @@ def create_product():
     if not data or "name" not in data or "price" not in data:
         return jsonify({"error": "Dados inválidos. 'name' e 'price' são obrigatórios"}), 400
 
-    product_id = str(len(products) + 1)  # Gera um novo ID para o produto
+    product_id = str(len(cart) + 1)  # Gera um novo ID para o produto
     novo_produto = {
         "id": data["id"],
         "name": data["name"],
         "price": data["price"]
     }
-    products.push(novo_produto)
+    cart.push(novo_produto)
 
     return jsonify({"message": "Produto criado com sucesso", "produto": {product_id: novo_produto}}), 201
 
@@ -117,11 +117,11 @@ def update_product(product_id):
     """
     Rota para atualizar um produto pelo seu ID.
     """
-    if product_id not in products:
+    if product_id not in cart:
         return jsonify({"error": "Produto não encontrado"}), 404
 
     data = request.json
-    updated_product = products[product_id]
+    updated_product = cart[product_id]
 
     # Atualizar apenas os campos fornecidos
     if "name" in data:
@@ -141,7 +141,7 @@ def create_request():
         "products": data.get("products", []),
         "status": "criado",
         "client_id": data.get("client_id"),
-        "total": sum(products[str(p)]["price"] for p in data.get("products", []))
+        "total": sum(cart[str(p)]["price"] for p in data.get("products", []))
     }
     requests[request_id] = new_request
 
