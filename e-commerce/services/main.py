@@ -26,6 +26,7 @@ class AtualizarPedido(BaseModel):
 # Banco de dados simulado de pedidos
 pedidos_db = {}
 
+# Cria pedido
 @app.post("/pedidos")
 async def criar_pedido(pedido: Pedido):
     if pedido.pedido_id in pedidos_db:
@@ -34,6 +35,7 @@ async def criar_pedido(pedido: Pedido):
     mensageria["Pedidos_Criados"].append(pedido.dict())
     return {"message": "Pedido criado com sucesso"}
 
+# Exclui pedido
 @app.delete("/pedidos/{pedido_id}")
 async def excluir_pedido(pedido_id: str):
     if pedido_id not in pedidos_db:
@@ -42,6 +44,7 @@ async def excluir_pedido(pedido_id: str):
     mensageria["Pedidos_Excluídos"].append({"pedido_id": pedido_id})
     return {"message": "Pedido excluído com sucesso"}
 
+# Atualiza pedido
 @app.post("/eventos")
 async def receber_evento(evento: AtualizarPedido):
     if evento.status == "pago":
@@ -54,6 +57,7 @@ async def receber_evento(evento: AtualizarPedido):
         raise HTTPException(status_code=400, detail="Status inválido")
     return {"message": f"Status do pedido {evento.pedido_id} atualizado"}
 
+# Pega um pedido pelo id
 @app.get("/pedidos/{pedido_id}")
 async def consultar_pedido(pedido_id: str):
     if pedido_id not in pedidos_db:
