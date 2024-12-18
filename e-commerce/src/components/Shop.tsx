@@ -1,34 +1,27 @@
 import Product from "./Product";
-import shokunin from "../assets/shokunin.jpg";
-import merc from "../assets/merc.jpg";
-import octane from "../assets/octane.jpg";
-import fennec from "../assets/fennec.jpg";
+import { useEffect } from "react";
+import useProductStore from "../store/product.store";
+import { useProduct } from "../hooks/product.hook";
 
 export default function Shop() {
+  const { storageProducts } = useProductStore();
+  const { updateShop } = useProduct();
+
+  useEffect(() => {
+    updateShop();
+  }, []);
+
   return (
     <div className="flex w-full p-24 gap-4 overflow-auto">
-      <Product
-        id="fennec"
-        title="Fennec"
-        imgSrc={fennec}
-        price="800"
-        quantity={1}
-      />
-      <Product
-        id="shokunin"
-        title="Shokunin"
-        imgSrc={shokunin}
-        price="1000"
-        quantity={1}
-      />
-      <Product
-        id="octane"
-        title="Octane"
-        imgSrc={octane}
-        price="10"
-        quantity={1}
-      />
-      <Product id="merc" title="Merc" imgSrc={merc} price="300" quantity={1} />
+      {storageProducts?.map((product) => (
+        <Product
+          id={product?.id}
+          name={product?.name}
+          imgSrc={product?.imgSrc}
+          price={product?.price}
+          quantity={product?.quantity}
+        />
+      ))}
     </div>
   );
 }
