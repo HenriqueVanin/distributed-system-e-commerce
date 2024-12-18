@@ -5,7 +5,17 @@ import pika
 import json
 import threading
 
+from flask_cors import CORS  # Importa o CORS
+
 app = Flask(__name__)
+CORS(app)  # Habilita CORS para o app Flask
+
+cors = CORS(app, resources={
+    r"/api/*": {
+        "origins": ["http://localhost:3000", "http://localhost:5173"]  # Adicione aqui os outros hosts ou portas
+    }
+})
+
 
 # Banco de dados simulado
 cart = []
@@ -161,6 +171,7 @@ def remove_request(request_id):
 @app.route('/requests', methods=['GET'])
 def list_requests():
     return jsonify(requests)
+
 
 if __name__ == '__main__':
     # Iniciar o consumidor em um thread separado

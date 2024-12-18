@@ -3,6 +3,8 @@ from flask_sse import sse
 from flask_cors import CORS  # Importa o CORS
 from redis import Redis
 
+import threading
+
 app = Flask(__name__)
 CORS(app)  # Habilita CORS para o app Flask
 
@@ -34,7 +36,7 @@ def on_request_pagamento_alterado(ch, method, properties, body):
     url = 'http://127.0.0.1:5000/stream'
     payload = {'status': request.status, 'message': request.message}  # Dados a serem enviados
     resposta = requests.post(url, json=payload)  # Faz a requisição HTTP com JSON
-    return jsonify({'mensagem': request.message : resposta.json()})
+    return jsonify({'mensagem': request.message})
    
 # Consumidor para a fila requests_Criados
 def consume_pagamentos_requests():

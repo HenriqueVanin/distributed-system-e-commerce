@@ -71,11 +71,3 @@ async def check_storage():
     return storage_db
 
 consume_requests()
-
-# @app.get("/estoque")
-# async def consultar_estoque():
-#     return storage_db
-
-# @app.get("/mensageria")
-# async def consultar_mensageria():
-#     return mensageria
