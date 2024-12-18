@@ -1,10 +1,8 @@
-from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import asyncio
 import pika
 import json
 
-app = FastAPI()
 
 # # Simulação de tópicos de mensageria
 # mensageria = {"requests_Criados": [], "requests_Excluídos": []}

@@ -3,7 +3,6 @@ import asyncio
 import pika
 import json
 
-app = FastAPI()
 
 # Simulação de mensagens publicadas em um sistema de mensageria
 # mensageria = {"requests_Enviados": []}

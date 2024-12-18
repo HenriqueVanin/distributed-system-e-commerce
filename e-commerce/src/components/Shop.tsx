@@ -8,7 +8,7 @@ export default function Shop() {
   return (
     <div className="flex w-full p-24 gap-4 overflow-auto">
       <Product
-      id="fennec"
+        id="fennec"
         title="Fennec"
         imgSrc={fennec}
         price="800"
@@ -28,13 +28,7 @@ export default function Shop() {
         price="10"
         quantity={1}
       />
-      <Product
-        id="merc"
-        title="Merc"
-        imgSrc={merc}
-        price="300"
-        quantity={1}
-      />
+      <Product id="merc" title="Merc" imgSrc={merc} price="300" quantity={1} />
     </div>
   );
 }
