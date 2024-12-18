@@ -26,6 +26,6 @@ export const removeProduct = async (productId: string): Promise<void> => {
 
 
 export const fetchStock = async (): Promise<Product[]> => {
-    const response = await api.get<{ estoque: Product[] }>('/estoque');
+    const response = await api.get<{ estoque: Product[] }>('/check_storage');
     return response.data.estoque; // Retorna apenas a lista de itens do estoque
 };
