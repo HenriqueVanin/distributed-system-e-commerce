@@ -76,9 +76,9 @@ def consume_events():
     channel = connection.channel()
 
     # Declarar filas
-    channel.queue_declare(queue='Pagamentos_Aprovados')
-    channel.queue_declare(queue='Pagamentos_Recusados')
-    channel.queue_declare(queue='requests_Enviados')
+    #channel.queue_declare(queue='Pagamentos_Aprovados', durable=False)
+    #channel.queue_declare(queue='Pagamentos_Recusados', durable=False)
+    #channel.queue_declare(queue='requests_Enviados', durable=False)
 
     # Configurar consumidores
     channel.basic_consume(queue='Pagamentos_Aprovados', on_message_callback=on_pagamento_aprovado)

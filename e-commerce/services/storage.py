@@ -45,8 +45,8 @@ def consume_requests():
         channel = connection.channel()
 
         # Declaração das filas
-        channel.queue_declare(queue='requests_Criados', durable=True)
-        channel.queue_declare(queue='requests_Excluidos', durable=True)
+        #channel.queue_declare(queue='requests_Criados', durable=True)
+        #channel.queue_declare(queue='requests_Excluidos', durable=True)
 
         # Configuração de consumo
         channel.basic_consume(queue='requests_Criados', on_message_callback=on_created_request)
