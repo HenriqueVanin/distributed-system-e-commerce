@@ -10,11 +10,6 @@ storage_bp = Blueprint("storage", __name__)
 
 # Banco de dados simulado de estoque
 
-storage_db = [{id: "fennec", "title": "Fennec", "price": 800, "imgSrc": "../assets/fennec.jpg", "quantity": 5},
-              {id: "octane", "title": "Octane", "price": 10, "imgSrc": "../assets/octane.jpg", "quantity": 15},
-              {id: "merc", "title": "Merc", "price": 300, "imgSrc": "../assets/merc.jpg", "quantity": 100},
-              {id: "shokunin", "title": "Shokunin", "price": 1000, "imgSrc": "../assets/shokunin.jpg", "quantity": 55}]
-
 # Modelos de dados
 class request(BaseModel):
     request_id: str
@@ -64,11 +59,6 @@ def consume_requests():
         if 'connection' in locals():
             connection.close()
 
-@app.get("/check_storage")
-async def check_storage():
-    """
-    Rota para consultar o estoque.
-    """
-    return storage_db
+
 
 consume_requests()

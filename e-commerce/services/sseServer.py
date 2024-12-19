@@ -2,9 +2,7 @@ from flask import Flask, request, jsonify
 from flask_sse import sse
 from flask_cors import CORS  # Importa o CORS
 from redis import Redis
-
 import threading
-sse_bp = Blueprint("sse", __name__)
 
 app = Flask(__name__)
 CORS(app)  # Habilita CORS para o app Flask
