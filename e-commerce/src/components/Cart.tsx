@@ -4,21 +4,10 @@ import { useProduct } from "../hooks/product.hook";
 import { Product } from "../service/types";
 
 const Cart: React.FC = () => {
-  const { productsAtCart, removeProductFromCart, handleQuantityChange } =
-    useProductStore();
-  const { calculateTotalPrice } = useProduct();
+  const { productsAtCart } = useProductStore();
+  const { calculateTotalPrice, removeProductFromCart, updateProductAtCart } =
+    useProduct();
   const navigate = useNavigate();
-  // const handleQuantityChange = (id: number, quantity: number) => {
-  //   setCart((prevCart) =>
-  //     prevCart.map((item) =>
-  //       item.id === id ? { ...item, quantity: Math.max(1, quantity) } : item
-  //     )
-  //   );
-  // };
-
-  const handleRemoveItem = (product: Product) => {
-    removeProductFromCart(product);
-  };
 
   return (
     <div className="grid w-[600px] flex-grow mx-auto p-4">
@@ -38,7 +27,10 @@ const Cart: React.FC = () => {
                   min="1"
                   value={product.quantity}
                   onChange={(e) =>
-                    handleQuantityChange(product, parseInt(e.target.value))
+                    updateProductAtCart({
+                      ...product,
+                      quantity: parseInt(e.target.value),
+                    })
                   }
                   className="input input-bordered w-16 text-center"
                 />
@@ -47,7 +39,7 @@ const Cart: React.FC = () => {
                 </p>
 
                 <button
-                  onClick={() => handleRemoveItem(product)}
+                  onClick={() => removeProductFromCart(product)}
                   className="btn btn-error btn-sm"
                 >
                   Remove
@@ -57,17 +49,23 @@ const Cart: React.FC = () => {
           </div>
         ))}
       </div>
-      <div className="mt-6">
-        <h2 className="text-xl font-semibold">
-          Total: ${calculateTotalPrice()}
-        </h2>
-        <button
-          className="btn btn-primary mt-4"
-          onClick={() => navigate("/checkout")}
-        >
-          Checkout
-        </button>
-      </div>
+      {productsAtCart.length !== 0 ? (
+        <div className="mt-6">
+          <h2 className="text-xl font-semibold">
+            Total: ${calculateTotalPrice()}
+          </h2>
+          <button
+            className="btn btn-primary mt-4"
+            onClick={() => navigate("/checkout")}
+          >
+            Checkout
+          </button>
+        </div>
+      ) : (
+        <div className="mt-6">
+          <h2 className="text-xl font-semibold">Cart is empty</h2>
+        </div>
+      )}
     </div>
   );
 };

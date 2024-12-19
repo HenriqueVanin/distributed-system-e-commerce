@@ -1,10 +1,10 @@
-import useProductStore from "../store/product.store";
 import { useToast } from "../hooks/toast.hook";
 import { Product as ProductType } from "../service/types";
+import { useProduct } from "../hooks/product.hook";
 
 export default function Product({ name, imgSrc, price, id }: ProductType) {
-  const { addProductIntoCart } = useProductStore();
   const { triggerToast } = useToast();
+  const { addProductIntoCart } = useProduct();
   return (
     <div className="card w-96 shadow-xl h-72 bg-blue-950 bg-opacity-20 rounded-md">
       <figure className="h-40 min-h-40">

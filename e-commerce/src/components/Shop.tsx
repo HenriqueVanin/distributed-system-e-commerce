@@ -5,10 +5,11 @@ import { useProduct } from "../hooks/product.hook";
 
 export default function Shop() {
   const { storageProducts } = useProductStore();
-  const { updateShop } = useProduct();
+  const { updateShop, getCart } = useProduct();
 
   useEffect(() => {
     updateShop();
+    getCart();
   }, []);
 
   return (
@@ -17,7 +18,7 @@ export default function Shop() {
         <Product
           id={product?.id}
           name={product?.name}
-          imgSrc={product?.imgSrc}
+          imgSrc={"/" + product?.imgSrc}
           price={product?.price}
           quantity={product?.quantity}
         />

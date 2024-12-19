@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { Product } from "../service/types";
+import { Order, Product } from "../service/types";
 
 // Definindo a interface do estado e das ações
 interface ProductState {
@@ -11,12 +11,16 @@ interface ProductState {
   clearCart: () => void;
   removeProductFromCart: (product: Product) => void;
   handleQuantityChange: (product: Product, newQuantity: number) => void;
+  orders: Order[];
+  setOrders: (o: Order[]) => void;
 }
 
 // Criando o store com tipos em TypeScript
 const useProductStore = create<ProductState>((set) => ({
   productsAtCart: [],
   setProductsAtCart: (p: Product[]) => set({ productsAtCart: p }),
+  orders: [],
+  setOrders: (o: Order[]) => set({ orders: o }),
   storageProducts: [],
   setStorageProducts: (p: Product[]) => set({ storageProducts: p }),
   clearCart: () => set({ productsAtCart: [] }),

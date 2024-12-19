@@ -1,8 +1,11 @@
 import qrCode from "../assets/qr-code.jpg";
 import { useProduct } from "../hooks/product.hook";
+import { createRequest } from "../service/requestService";
+import useProductStore from "../store/product.store";
 
 export const Checkout = () => {
   const { calculateTotalPrice } = useProduct();
+  const { productsAtCart } = useProductStore();
   return (
     <div className="flex justify-center items-center h-full">
       <div className="flex items-center justify-center">
@@ -30,6 +33,17 @@ export const Checkout = () => {
             <div className="bg-white p-12">
               <img src={qrCode} alt="QR Code" />
             </div>
+            <button
+              className="btn btn-primary"
+              onClick={() => {
+                createRequest({
+                  total: calculateTotalPrice().toString(),
+                  client_id: "1",
+                });
+              }}
+            >
+              Pay
+            </button>
           </div>
         </div>
       </div>
