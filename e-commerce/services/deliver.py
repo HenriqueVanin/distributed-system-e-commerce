@@ -2,10 +2,13 @@ from pydantic import BaseModel
 import asyncio
 import pika
 import json
+from flask import Blueprint
+import threading
 
+deliver = Blueprint('deliver', __name__)
 
 # Simulação de mensagens publicadas em um sistema de mensageria
-# mensageria = {"requests_Enviados": []}
+# mensageria = {"Pedidos_Enviados": []}
 # fila_pagamentos_aprovados = []
 
 class requestEntrega(BaseModel):
@@ -22,15 +25,15 @@ def on_aproved_payment(ch, method, properties, body):
         "nota_fiscal": f"NF-{pagamento['request_id']}"
     }
 
-    # Publica no tópico requests_Enviados
+    # Publica no tópico Pedidos_Enviados
     connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
     channel = connection.channel()
 
-    channel.exchange_declare(exchange='requests_Enviados', exchange_type='fanout')
+    channel.exchange_declare(exchange='Pedidos_Enviados', exchange_type='fanout')
 
     # Publica o evento
     channel.basic_publish(
-        exchange='requests_Enviados',
+        exchange='Pedidos_Enviados',
         routing_key='',
         body=json.dumps(sent_request)
     )
@@ -38,7 +41,7 @@ def on_aproved_payment(ch, method, properties, body):
     print(f"request enviado: {sent_request}")
 
     # Confirma o processamento da mensagem
-    ch.basic_ack(delivery_tag=method.delivery_tag)
+    #ch.basic_ack(delivery_tag=method.delivery_tag)
 
 def consume_aproved_payment():
     connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
@@ -48,11 +51,10 @@ def consume_aproved_payment():
     channel.queue_declare(queue='Pagamentos_Aprovados')
 
     # Configura o consumidor
-    channel.basic_consume(queue='Pagamentos_Aprovados', on_message_callback=on_aproved_payment)
+    channel.basic_consume(queue='Pagamentos_Aprovados', on_message_callback=on_aproved_payment, auto_ack=True)
 
     print('Esperando por pagamentos aprovados...')
     channel.start_consuming()
 
-consume_aproved_payment()
-
-
+def start_deliver_thread():
+    threading.Thread(target=consume_aproved_payment, daemon=True).start()

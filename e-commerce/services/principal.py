@@ -1,37 +1,21 @@
 from pydantic import BaseModel
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, Blueprint, url_for, redirect
 import asyncio
 import pika
 import json
 import threading
 from datetime import datetime
-
 from flask_cors import CORS  # Importa o CORS
 
-app = Flask(__name__)
-CORS(app)  # Habilita CORS para o app Flask
+principal = Blueprint('principal', __name__)
 
-cors = CORS(app, resources={
-    r"/api/*": {
-        "origins": ["http://localhost:3000", "http://localhost:5173"]  # Adicione aqui os outros hosts ou portas
-    }
-})
-
-#principal_bp = Blueprint("principal", __name__)
+def get_channel():
+    connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
+    return connection.channel()
 
 # Banco de dados simulado
 cart = []
 requests = []
-
-storage_db = [{'id': "fennec", "name": "Fennec", "price": '800', "imgSrc": "public/fennec.jpg", "quantitley": '5'},
-              {'id': "octane", "name": "Octane", "price": '10', "imgSrc": "public/octane.jpg", "quantity": '15'},
-              {'id': "merc", "name": "Merc", "price": '300', "imgSrc": "public/merc.jpg", "quantity": '100'},
-              {'id': "shokunin", "name": "Shokunin", "price": '1000', "imgSrc": "public/shokunin.jpg", "quantity": '55'}]
-
-# Configuração do RabbitMQ
-def get_channel():
-    connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
-    return connection.channel()
 
 # Publicar evento
 def publish_event(topic, message):
@@ -42,25 +26,32 @@ def publish_event(topic, message):
         routing_key=topic,
         body=json.dumps(message)
     )
-    print(f"Evento publicado em {topic}: {message}")
+    print(f"--------- Evento publicado em {topic}: {message}")
 
 # Callback para consumo de eventos
 def on_pagamento_aprovado(ch, method, properties, body):
-    evento = json.loads(body)
+    print(f"Mensagem recebida: {body}")
+    if not body:
+        print("Corpo vazio!")
+        return
+
+    try:
+        evento = json.loads(body)
+    except json.JSONDecodeError as e:
+        print(f"Erro ao decodificar JSON: {e}")
+        return
     request_id = evento.get("request_id")
     if request_id in requests:
         requests[request_id]["status"] = "pagamento aprovado"
         print(f"request {request_id} atualizado para 'pagamento aprovado'")
-    ch.basic_ack(delivery_tag=method.delivery_tag)
 
 def on_pagamento_recusado(ch, method, properties, body):
     evento = json.loads(body)
     request_id = evento.get("request_id")
     if request_id in requests:
         requests[request_id]["status"] = "pagamento recusado"
-        publish_event('requests_Excluídos', {"request_id": request_id})
-        print(f"request {request_id} atualizado para 'pagamento recusado' e publicado no tópico requests_Excluídos")
-    ch.basic_ack(delivery_tag=method.delivery_tag)
+        publish_event('Pedidos_Excluídos', {"request_id": request_id})
+        print(f"request {request_id} atualizado para 'pagamento recusado' e publicado no tópico Pedidos_Excluídos")
 
 def on_request_enviado(ch, method, properties, body):
     evento = json.loads(body)
@@ -68,35 +59,37 @@ def on_request_enviado(ch, method, properties, body):
     if request_id in requests:
         requests[request_id]["status"] = "enviado"
         print(f"request {request_id} atualizado para 'enviado'")
-    ch.basic_ack(delivery_tag=method.delivery_tag)
+    #ch.basic_ack(delivery_tag=method.delivery_tag)
 
 # Consumir eventos
 def consume_events():
-    connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
-    channel = connection.channel()
+    channel = get_channel()
 
     # Declarar filas
-    #channel.queue_declare(queue='Pagamentos_Aprovados', durable=False)
-    #channel.queue_declare(queue='Pagamentos_Recusados', durable=False)
-    #channel.queue_declare(queue='requests_Enviados', durable=False)
+    channel.queue_declare(queue='Pagamentos_Aprovados', durable=False)
+    channel.queue_declare(queue='Pagamentos_Recusados', durable=False)
+    channel.queue_declare(queue='Pedidos_Enviados', durable=False)
+    channel.queue_declare(queue='Pedidos_Criados', durable=False)
+
 
     # Configurar consumidores
-    channel.basic_consume(queue='Pagamentos_Aprovados', on_message_callback=on_pagamento_aprovado)
-    channel.basic_consume(queue='Pagamentos_Recusados', on_message_callback=on_pagamento_recusado)
-    channel.basic_consume(queue='requests_Enviados', on_message_callback=on_request_enviado)
+    channel.basic_consume(queue='Pedidos_Criados', on_message_callback=on_pagamento_aprovado, auto_ack=True)
+    channel.basic_consume(queue='Pagamentos_Aprovados', on_message_callback=on_pagamento_aprovado, auto_ack=True)
+    channel.basic_consume(queue='Pagamentos_Recusados', on_message_callback=on_pagamento_recusado, auto_ack=True)
+    channel.basic_consume(queue='Pedidos_Enviados', on_message_callback=on_request_enviado, auto_ack=True)
 
     print("Consumindo eventos...")
     channel.start_consuming()
 
 # Rotas da API REST
-@app.route('/products', methods=['GET'])
+@principal.route('/products', methods=['GET'])
 def list_products():
     """
     Rota para listar products.
     """
     return jsonify(cart)
 
-@app.route('/products', methods=['POST'])
+@principal.route('/products', methods=['POST'])
 def create_product():
     """
     Rota para criar um novo produto.
@@ -116,7 +109,15 @@ def create_product():
     return jsonify({"message": "Produto criado com sucesso", "produto": {"nome": data["name"], "id": data["id"]}}), 201
 
 
-@app.route('/products/<product_id>', methods=['DELETE'])
+@principal.route('/clear_products', methods=['POST'])
+def clear_products():
+    """
+    Rota para limpar o carrinho de compras.
+    """
+    cart.clear()
+    return jsonify({"message": "Carrinho de compras limpo com sucesso"}), 200
+
+@principal.route('/products/<product_id>', methods=['DELETE'])
 def remove_product(product_id):
     """
     Rota para remover um produto pelo seu ID.
@@ -134,7 +135,7 @@ def remove_product(product_id):
     return jsonify({"error": "Produto não encontrado."}), 404
 
 
-@app.route('/products/<product_id>', methods=['PUT'])
+@principal.route('/products/<product_id>', methods=['PUT'])
 def update_product(product_id):
     """
     Rota para atualizar um produto pelo seu ID.
@@ -153,7 +154,7 @@ def update_product(product_id):
     return jsonify({"message": f"Produto {product_id} atualizado com sucesso", "produto": product_founded}), 200
 
 
-@app.route('/requests', methods=['POST'])
+@principal.route('/requests', methods=['POST'])
 def create_request():
     data = request.json
     request_id = str(len(requests) + 1)
@@ -173,34 +174,32 @@ def create_request():
     products = []
 
     requests.append(new_request)
-
-    # Publicar evento no tópico requests_Criados
-    publish_event('requests_Criados', new_request)
+    channel = get_channel()
+    channel.queue_declare(queue='Pedidos_Criados')
+    # Publicar evento no tópico Pedidos_Criados
+    publish_event('Pedidos_Criados', new_request)
     return jsonify(new_request), 201
 
-@app.route('/requests/<request_id>', methods=['DELETE'])
+@principal.route('/requests/<request_id>', methods=['DELETE'])
 def remove_request(request_id):
     if request_id in requests:
         request = requests.pop(request_id)
-        request["status"] = "excluído"
-        publish_event('requests_Excluídos', request)
+        request["status"] = "excluido"
+        publish_event('Pedidos_Excluídos', request)
         return jsonify({"message": f"request {request_id} excluído"}), 200
     else:
         return jsonify({"error": "request não encontrado"}), 404
 
-@app.route('/requests', methods=['GET'])
+@principal.route('/requests', methods=['GET'])
 def list_requests():
     return jsonify(requests)
 
-@app.get("/check_storage")
+@principal.get("/check_storage")
 async def check_storage():
     """
     Rota para consultar o estoque.
     """
-    return storage_db
-if __name__ == '__main__':
-    # Iniciar o consumidor em um thread separado
+    check_storage_url = url_for("storage.check_storage")
+    return redirect(check_storage_url)
+def start_principal_thread():
     threading.Thread(target=consume_events, daemon=True).start()
-
-    # Iniciar o Flask
-    app.run(debug=True)

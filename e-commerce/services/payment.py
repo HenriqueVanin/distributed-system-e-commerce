@@ -1,8 +1,13 @@
 from pydantic import BaseModel
-from flask import Flask, request
+from flask import Flask, request, Blueprint
 import asyncio
 import pika
 import json
+import threading
+import random
+import time
+
+payment = Blueprint('payment', __name__)
 
 # Simulação de mensagens publicadas em um sistema de mensageria
 # mensageria = {"Pagamentos_Aprovados": [], "Pagamentos_Recusados": []}
@@ -10,8 +15,6 @@ import json
 class PagamentoWebhook(BaseModel):
     request_id: str
     status: str  # "aprovado" ou "recusado"
-
-app = Flask(__name__)
 
 # Configuração do RabbitMQ
 def get_channel():
@@ -29,49 +32,44 @@ def publish_event(topic, message):
     )
     print(f"Evento publicado em {topic}: {message}")
 
-# Callback para processar mensagens da fila requests_Criados
+# Callback para processar mensagens da fila Pedidos_Criados
 def on_created_request(ch, method, properties, body):
-    request = json.loads(body)
-    print(f"request recebido: {request}")
-
-    if request.status == 'aprovado':
+    print(f"request recebido: {body}")
+    if not body:
+        print("Erro: Corpo vazio!")
+        return
+    
+    try:
+        request = json.loads(body)
+    except json.JSONDecodeError as e:
+        print(f"Erro ao decodificar JSON: {e}")
+        return
+    
+    print("Request recebido:", request)
+    request["status"] = "enviado"
+    publish_event('Pedidos_Enviados', request)
+    time.sleep(10)
+    if random.choice([True, False]):
+        request["status"] = "aprovado"
         publish_event('Pagamentos_Aprovados', request)
     else:
+        request["status"] = "recusado"
         publish_event('Pagamentos_Recusados', request)
 
-    # Confirma o processamento da mensagem
-    ch.basic_ack(delivery_tag=method.delivery_tag)
-
-# Consumidor para a fila requests_Criados
+# Consumidor para a fila Pedidos_Criados
 def consume_created_requests():
     channel = get_channel()
 
-    # Declara a fila requests_Criados
-    channel.queue_declare(queue='requests_Criados')
+    # Declara a fila Pedidos_Criados
+    channel.queue_declare(queue='Pedidos_Criados')
 
     # Configura o consumidor
-    channel.basic_consume(queue='requests_Criados', on_message_callback=on_created_request)
+    channel.basic_consume(queue='Pedidos_Criados', on_message_callback=on_created_request, auto_ack=True)
 
     print('Esperando por requests criados...')
     channel.start_consuming()
 
-# Endpoint para o webhook de pagamento
-@app.route('/webhook_payment', methods=['POST'])
-async def webhook_payment():
-    payment = request.json
-    if payment['status'] == 'aprovado':
-        publish_event('Pagamentos_Aprovados', payment)
-        return 'Pagamento processado', 200
-    elif payment['status'] == 'recusado':
-        publish_event('Pagamentos_Recusados', payment)
-        return 'Pagamento processado', 200
-    else:
-        return 'Pagamento não processado', 400
 
-if __name__ == '__main__':
-    # Iniciar o consumidor em um thread separado
-    import threading
+
+def start_payment_thread():
     threading.Thread(target=consume_created_requests, daemon=True).start()
-
-    # Iniciar o Flask
-    app.run(debug=True)
