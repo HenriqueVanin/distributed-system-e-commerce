@@ -4,6 +4,7 @@ import pika
 import json
 from flask import Blueprint
 import threading
+from pika.exchange_type import ExchangeType
 
 
 storage = Blueprint("storage", __name__)
@@ -30,35 +31,34 @@ def on_created_request(ch, method, properties, body):
     if not body:
         print("Erro: Corpo vazio!")
         return
-    
     try:
         request = json.loads(body)
+        products = request['products']
+        for item in products:
+            product_id = item["id"]
+            quantity = item["quantity"]
+            # Encontrar o índice do produto no array de estoque
+            index = -1
+            for i, p in enumerate(storage_db):
+                if p["id"] == product_id:
+                    index = i
+                    break
+            if(request['status']=='criado'):
+                if index == -1 or (int(storage_db[index]["quantity"]) < int(quantity)):
+                    print("Estoque insuficiente")
+                
+                newQuantity = int(storage_db[index]["quantity"]) - int(quantity)
+            elif(request['status']=='excluido'): 
+                if index == -1:
+                    print("Produto não encontrado")
+                
+                newQuantity = int(storage_db[index]["quantity"]) + int(quantity)
+            storage_db[index]["quantity"] = str(newQuantity)
+       
     except json.JSONDecodeError as e:
         print(f"Erro ao decodificar JSON: {e}")
         return
     
-    print("Request recebido:", request)
-    for item in request['products']:
-        product_id = item["product_id"]
-        quantity = item["quantity"]
-        if product_id not in storage_db or storage_db[product_id] < quantity:
-            raise HTTPException(status_code=400, detail="Estoque insuficiente")
-        storage_db[product_id] -= quantity
-
-    print(f"request excluído: {request}")
-    #ch.basic_ack(delivery_tag=method.delivery_tag)
-
-def on_removed_request(ch, method, properties, body):
-    request = json.loads(body)
-    for item in request['products']:
-        product_id = item["product_id"]
-        quantity = item["quantity"]
-        if product_id not in storage_db:
-            raise HTTPException(status_code=404, detail="Produto não encontrado no estoque")
-        storage_db[product_id] += quantity
-    print(f"request excluído: {request}")
-    #ch.basic_ack(delivery_tag=method.delivery_tag)
-
 @storage.get("/check_storage")
 async def check_storage():
     """
@@ -71,19 +71,16 @@ def consume_requests():
         # Conexão com o RabbitMQ
         connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
         channel = connection.channel()
-
-        # Declaração das filas
-        channel.queue_declare(queue='Pedidos_Criados', durable=False)
-        channel.queue_declare(queue='requests_Excluidos', durable=False)
-
-        # Configuração de consumo
-        channel.basic_consume(queue='Pedidos_Criados', on_message_callback=on_created_request, auto_ack=True)
-        channel.basic_consume(queue='requests_Excluidos', on_message_callback=on_removed_request, auto_ack=True)
-
-        print('Esperando por requests...')
+        channel.exchange_declare(exchange='Pedidos_Criados', exchange_type=ExchangeType.fanout) 
+        channel.exchange_declare(exchange='Pedidos_Excluidos', exchange_type=ExchangeType.fanout) 
+        queue = channel.queue_declare(queue='', exclusive=True)
+        channel.queue_bind(exchange='Pedidos_Criados', queue=queue.method.queue)
+        channel.queue_bind(exchange='Pedidos_Excluidos', queue=queue.method.queue)
+        channel.basic_consume(queue=queue.method.queue, on_message_callback=on_created_request, auto_ack=True)
+      
         channel.start_consuming()
     except KeyboardInterrupt:
-        print("Encerrando consumidor...")
+       #print("Encerrando consumidor...")
         if 'connection' in locals():
             connection.close()
 

@@ -35,7 +35,7 @@ def webhook():
         return jsonify({"error": "Invalid payload"}), 400
 
     message = data.get('message', 'Sem mensagem')
-    sse.publish({"message": f"Pedido {message}"}, type='new_message')
+    sse.publish({"message": f"{message}"}, type='new_message')
 
     return jsonify({"status": "Mensagem recebida!", "message": message}), 200
 

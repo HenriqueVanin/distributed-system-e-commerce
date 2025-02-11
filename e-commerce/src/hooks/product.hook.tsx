@@ -1,14 +1,19 @@
+import { toast } from "react-toastify";
 import {
   createProduct,
   fetchStock,
   listProducts,
   removeProduct,
   updateProduct,
+  clearCart as clearCartPromise,
 } from "../service/productService";
 import { Product } from "../service/types";
 import useProductStore from "../store/product.store";
+import { useToast } from "./toast.hook";
 
 export const useProduct = () => {
+  const { triggerToast } = useToast();
+  const { storageProducts } = useProductStore();
   const { productsAtCart, setStorageProducts, setProductsAtCart } =
     useProductStore();
   const calculateTotalQuantity = (): number => {
@@ -17,7 +22,6 @@ export const useProduct = () => {
       .reduce((sum, quantity) => sum + quantity, 0); // Soma os totales
   };
   const calculateTotalPrice = (): number => {
-    console.log(productsAtCart);
     return productsAtCart
       .map((item) => Number(item.price) * item.quantity) // Converte 'price' para string e depois para número
       .reduce((sum, price) => sum + price, 0); // Soma os totales
@@ -32,15 +36,24 @@ export const useProduct = () => {
     if (res) setProductsAtCart(res);
   };
 
+  const clearCartAction = async () => {
+    await clearCartPromise();
+  };
+
   const addProductIntoCart = async (product: Product) => {
     if (productsAtCart.some((p) => p.id === product.id)) {
       const actualQuantity = productsAtCart.find(
         (p) => p.id === product.id
       )?.quantity;
-      await updateProductAtCart({
-        ...product,
-        quantity: (actualQuantity ?? 1) + 1,
-      });
+      const stockQuantity =
+        storageProducts?.find((p) => p.id === product.id)?.quantity ?? 0;
+      if (actualQuantity && actualQuantity + 1 <= stockQuantity) {
+        await updateProductAtCart({
+          ...product,
+          quantity: (actualQuantity ?? 1) + 1,
+        });
+        triggerToast(product.name + " added to cart");
+      } else toast("You reached the limit of our stock");
     } else {
       await createProduct(product);
     }
@@ -65,5 +78,6 @@ export const useProduct = () => {
     calculateTotalPrice,
     updateProductAtCart,
     removeProductFromCart,
+    clearCartAction,
   };
 };

@@ -1,9 +1,13 @@
-import { useToast } from "../hooks/toast.hook";
 import { Product as ProductType } from "../service/types";
 import { useProduct } from "../hooks/product.hook";
 
-export default function Product({ name, imgSrc, price, id }: ProductType) {
-  const { triggerToast } = useToast();
+export default function Product({
+  name,
+  imgSrc,
+  price,
+  id,
+  quantity,
+}: ProductType) {
   const { addProductIntoCart } = useProduct();
   return (
     <div className="card w-96 shadow-xl h-72 bg-blue-950 bg-opacity-20 rounded-md">
@@ -12,7 +16,9 @@ export default function Product({ name, imgSrc, price, id }: ProductType) {
       </figure>
       <div className="card-body">
         <h2 className="card-title flex items-center justify-between">
-          <div>{name}</div>
+          <div>
+            {name} ({quantity})
+          </div>
           <div>
             <p>Ȼ {price}</p>
           </div>
@@ -21,7 +27,6 @@ export default function Product({ name, imgSrc, price, id }: ProductType) {
           className="btn"
           onClick={() => {
             addProductIntoCart({ name, imgSrc, price, id, quantity: 1 });
-            triggerToast(name + " added to cart");
           }}
         >
           Add to Cart

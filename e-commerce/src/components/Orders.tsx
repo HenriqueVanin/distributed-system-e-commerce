@@ -1,11 +1,10 @@
 import useProductStore from "../store/product.store";
-// import { useProduct } from "../hooks/product.hook";
 import { Order } from "../service/types";
 import { useEffect } from "react";
 import { useRequest } from "../hooks/request.hook";
 
 const Orders: React.FC = () => {
-  const { updateOrders } = useRequest();
+  const { updateOrders, removeOrder } = useRequest();
   const { orders } = useProductStore();
   useEffect(() => {
     updateOrders();
@@ -21,19 +20,28 @@ const Orders: React.FC = () => {
           >
             <div className="flex w-full items-center justify-between gap-2">
               <div className="grid">
-                <h2 className="text-lg font-semibold">{order.status}</h2>
+                <h2 className="text-lg font-semibold">{order.request_id}</h2>
+              </div>
+
+              <div className="grid">
+                <h2 className="text-lg font-semibold">
+                  {order.status?.toLocaleUpperCase()}
+                </h2>
+              </div>
+              <div className="grid">
+                <h2 className="text-lg font-semibold">{order.created_at}</h2>
               </div>
               <div className="flex items-center gap-2">
                 <p className="w-24 justify-end flex text-lg text-secondary font-semibold">
                   ${order.total}
                 </p>
 
-                {/* <button
-                  onClick={() => removeProductFromCart(order)}
+                <button
+                  onClick={() => removeOrder(order)}
                   className="btn btn-error btn-sm"
                 >
                   Remove
-                </button> */}
+                </button>
               </div>
             </div>
           </div>

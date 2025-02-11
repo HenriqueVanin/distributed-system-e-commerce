@@ -1,13 +1,14 @@
 import { useNavigate } from "react-router-dom";
 import Messenger from "./Messenger";
-import useProductStore from "../store/product.store";
 import { useToast } from "../hooks/toast.hook";
 import { useProduct } from "../hooks/product.hook";
+import useProductStore from "../store/product.store";
 
 export default function Navbar() {
   const { clearCart } = useProductStore();
   const { triggerToast } = useToast();
-  const { calculateTotalQuantity, calculateTotalPrice } = useProduct();
+  const { calculateTotalQuantity, calculateTotalPrice, clearCartAction } =
+    useProduct();
   const navigate = useNavigate();
 
   return (
@@ -65,6 +66,7 @@ export default function Navbar() {
                   className="btn btn-primary btn-block"
                   onClick={() => {
                     clearCart();
+                    clearCartAction();
                     triggerToast("Cart cleared");
                   }}
                 >

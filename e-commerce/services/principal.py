@@ -2,6 +2,7 @@ from pydantic import BaseModel
 from flask import Flask, request, jsonify, Blueprint, url_for, redirect
 import asyncio
 import pika
+from pika.exchange_type import ExchangeType
 import json
 import threading
 from datetime import datetime
@@ -17,68 +18,65 @@ def get_channel():
 cart = []
 requests = []
 
+def on_return(ch, method, properties, body):
+    print("Mensagem não roteada:", body.decode())
 # Publicar evento
 def publish_event(topic, message):
     channel = get_channel()
-    channel.queue_declare(queue=topic)
-    channel.basic_publish(
-        exchange='',
-        routing_key=topic,
-        body=json.dumps(message)
-    )
-    print(f"--------- Evento publicado em {topic}: {message}")
+    channel.exchange_declare(exchange=topic, exchange_type=ExchangeType.fanout)
+    try:
+        # Publica a mensagem
+        channel.basic_publish(
+            exchange=topic,
+            routing_key='',
+            body=json.dumps(message)
+        )
+        
+    except pika.exceptions.UnroutableError:
+        print("Erro: Mensagem não foi roteada para a fila!")
+    except Exception as e:
+        print("Erro inesperado:", e)
 
 # Callback para consumo de eventos
-def on_pagamento_aprovado(ch, method, properties, body):
-    print(f"Mensagem recebida: {body}")
+def on_aproved_payment(ch, method, properties, body):
+   #print(f"Mensagem recebida: {body}")
     if not body:
-        print("Corpo vazio!")
+       #print("Corpo vazio!")
         return
 
     try:
         evento = json.loads(body)
     except json.JSONDecodeError as e:
-        print(f"Erro ao decodificar JSON: {e}")
+       #print(f"Erro ao decodificar JSON: {e}")
         return
     request_id = evento.get("request_id")
     if request_id in requests:
         requests[request_id]["status"] = "pagamento aprovado"
-        print(f"request {request_id} atualizado para 'pagamento aprovado'")
+       #print(f"request {request_id} atualizado para 'pagamento aprovado'")
 
-def on_pagamento_recusado(ch, method, properties, body):
+def on_reproved_payment(ch, method, properties, body):
     evento = json.loads(body)
     request_id = evento.get("request_id")
     if request_id in requests:
         requests[request_id]["status"] = "pagamento recusado"
-        publish_event('Pedidos_Excluídos', {"request_id": request_id})
-        print(f"request {request_id} atualizado para 'pagamento recusado' e publicado no tópico Pedidos_Excluídos")
+        publish_event('Pedidos_Excluidos', {"request_id": request_id})
+       #print(f"request {request_id} atualizado para 'pagamento recusado' e publicado no tópico Pedidos_Excluídos")
 
 def on_request_enviado(ch, method, properties, body):
     evento = json.loads(body)
     request_id = evento.get("request_id")
     if request_id in requests:
         requests[request_id]["status"] = "enviado"
-        print(f"request {request_id} atualizado para 'enviado'")
-    #ch.basic_ack(delivery_tag=method.delivery_tag)
 
 # Consumir eventos
 def consume_events():
     channel = get_channel()
 
-    # Declarar filas
-    channel.queue_declare(queue='Pagamentos_Aprovados', durable=False)
-    channel.queue_declare(queue='Pagamentos_Recusados', durable=False)
-    channel.queue_declare(queue='Pedidos_Enviados', durable=False)
-    channel.queue_declare(queue='Pedidos_Criados', durable=False)
+    channel.exchange_declare(exchange='Pedidos_Aprovados', exchange_type=ExchangeType.fanout) 
+    queue = channel.queue_declare(queue='', exclusive=True)
+    channel.queue_bind(exchange='Pedidos_Aprovados', queue=queue.method.queue)
+    channel.basic_consume(queue=queue.method.queue, on_message_callback=on_aproved_payment, auto_ack=True)
 
-
-    # Configurar consumidores
-    channel.basic_consume(queue='Pedidos_Criados', on_message_callback=on_pagamento_aprovado, auto_ack=True)
-    channel.basic_consume(queue='Pagamentos_Aprovados', on_message_callback=on_pagamento_aprovado, auto_ack=True)
-    channel.basic_consume(queue='Pagamentos_Recusados', on_message_callback=on_pagamento_recusado, auto_ack=True)
-    channel.basic_consume(queue='Pedidos_Enviados', on_message_callback=on_request_enviado, auto_ack=True)
-
-    print("Consumindo eventos...")
     channel.start_consuming()
 
 # Rotas da API REST
@@ -158,8 +156,7 @@ def update_product(product_id):
 def create_request():
     data = request.json
     request_id = str(len(requests) + 1)
-    products = data.get("products", [])
-
+    products = cart
     # Calculando o total corretamente
     total = 0
     new_request = {
@@ -174,18 +171,22 @@ def create_request():
     products = []
 
     requests.append(new_request)
-    channel = get_channel()
-    channel.queue_declare(queue='Pedidos_Criados')
     # Publicar evento no tópico Pedidos_Criados
     publish_event('Pedidos_Criados', new_request)
     return jsonify(new_request), 201
 
 @principal.route('/requests/<request_id>', methods=['DELETE'])
 def remove_request(request_id):
-    if request_id in requests:
-        request = requests.pop(request_id)
-        request["status"] = "excluido"
-        publish_event('Pedidos_Excluídos', request)
+    request_to_remove = None
+    for request in requests:
+        if request.get("request_id") == request_id:
+            request_to_remove = request
+            break
+
+    if request_to_remove:
+        requests.remove(request_to_remove)  # Remover o item da lista
+        request_to_remove["status"] = "excluido"
+        publish_event('Pedidos_Excluidos', request_to_remove)
         return jsonify({"message": f"request {request_id} excluído"}), 200
     else:
         return jsonify({"error": "request não encontrado"}), 404

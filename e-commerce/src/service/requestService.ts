@@ -3,16 +3,16 @@ import { Order, RequestPayload } from "./types"; // Importa os tipos
 
 // Listar pedidos
 export const listRequests = async (): Promise<Order[]> => {
-  const response = await api.get<Order[]>("/requests");
+  const response = await api.get<Order[]>("/principal/requests");
   return response.data;
 };
 
 // Criar pedido
 export const createRequest = async (request: RequestPayload) => {
-  await api.post<RequestPayload>("/requests", request);
+  await api.post<RequestPayload>("/principal/requests", request);
 };
 
 // Remover pedido
 export const removeRequest = async (requestId: string): Promise<void> => {
-  await api.delete(`/requests/${requestId}`);
+  await api.delete(`/principal/requests/${requestId}`);
 };

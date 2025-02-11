@@ -1,11 +1,13 @@
+import { useNavigate } from "react-router-dom";
 import qrCode from "../assets/qr-code.jpg";
 import { useProduct } from "../hooks/product.hook";
-import { createRequest } from "../service/requestService";
 import useProductStore from "../store/product.store";
 
 export const Checkout = () => {
   const { calculateTotalPrice } = useProduct();
-  const { productsAtCart } = useProductStore();
+  const { clearCartAction } = useProduct();
+  const { clearCart } = useProductStore();
+  const navigate = useNavigate();
   return (
     <div className="flex justify-center items-center h-full">
       <div className="flex items-center justify-center">
@@ -36,10 +38,9 @@ export const Checkout = () => {
             <button
               className="btn btn-primary"
               onClick={() => {
-                createRequest({
-                  total: calculateTotalPrice().toString(),
-                  client_id: "1",
-                });
+                clearCartAction();
+                clearCart();
+                navigate("/orders");
               }}
             >
               Pay

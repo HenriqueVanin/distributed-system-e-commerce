@@ -6,6 +6,7 @@ import json
 import threading
 import random
 import time
+from pika.exchange_type import ExchangeType
 
 payment = Blueprint('payment', __name__)
 
@@ -24,28 +25,30 @@ def get_channel():
 # Função para publicar eventos
 def publish_event(topic, message):
     channel = get_channel()
-    channel.queue_declare(queue=topic)  # Declara a fila, se ainda não existir
-    channel.basic_publish(
-        exchange='',
-        routing_key=topic,
-        body=json.dumps(message)
-    )
-    print(f"Evento publicado em {topic}: {message}")
+    channel.exchange_declare(exchange=topic, exchange_type=ExchangeType.fanout)
+    try:
+        channel.basic_publish(
+            exchange=topic,
+            routing_key='',
+            body=json.dumps(message)
+        )
+        
+    except pika.exceptions.UnroutableError:
+        print("Erro: Mensagem não foi roteada para a fila!")
+    except Exception as e:
+        print("Erro inesperado:", e)
 
 # Callback para processar mensagens da fila Pedidos_Criados
 def on_created_request(ch, method, properties, body):
-    print(f"request recebido: {body}")
     if not body:
         print("Erro: Corpo vazio!")
         return
-    
     try:
         request = json.loads(body)
     except json.JSONDecodeError as e:
         print(f"Erro ao decodificar JSON: {e}")
         return
     
-    print("Request recebido:", request)
     request["status"] = "enviado"
     publish_event('Pedidos_Enviados', request)
     time.sleep(10)
@@ -58,15 +61,18 @@ def on_created_request(ch, method, properties, body):
 
 # Consumidor para a fila Pedidos_Criados
 def consume_created_requests():
+    print("iniciado o consumidor de pagamentos")
     channel = get_channel()
 
-    # Declara a fila Pedidos_Criados
-    channel.queue_declare(queue='Pedidos_Criados')
+    channel.exchange_declare(exchange='Pagamentos_Aprovados', exchange_type=ExchangeType.fanout) 
+    channel.exchange_declare(exchange='Pagamentos_Recusados', exchange_type=ExchangeType.fanout) 
+    queue = channel.queue_declare(queue='', exclusive=True)
+    channel.queue_bind(exchange='Pagamentos_Aprovados', queue=queue.method.queue)
+    channel.queue_bind(exchange='Pagamentos_Recusados', queue=queue.method.queue)
 
-    # Configura o consumidor
-    channel.basic_consume(queue='Pedidos_Criados', on_message_callback=on_created_request, auto_ack=True)
+    channel.basic_consume(queue=queue.method.queue, on_message_callback=on_created_request, auto_ack=True)
 
-    print('Esperando por requests criados...')
+    #print('Esperando por requests criados...')
     channel.start_consuming()
 
 

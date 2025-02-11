@@ -2,9 +2,12 @@ import useProductStore from "../store/product.store";
 import { useNavigate } from "react-router-dom";
 import { useProduct } from "../hooks/product.hook";
 import { Product } from "../service/types";
+import { createRequest } from "../service/requestService";
 
 const Cart: React.FC = () => {
   const { productsAtCart } = useProductStore();
+
+  const { storageProducts } = useProductStore();
   const { calculateTotalPrice, removeProductFromCart, updateProductAtCart } =
     useProduct();
   const navigate = useNavigate();
@@ -26,12 +29,18 @@ const Cart: React.FC = () => {
                   type="number"
                   min="1"
                   value={product.quantity}
-                  onChange={(e) =>
+                  onChange={(e) => {
+                    const storageQuantity =
+                      storageProducts.find((p) => p.id === product.id)
+                        ?.quantity ?? 0;
                     updateProductAtCart({
                       ...product,
-                      quantity: parseInt(e.target.value),
-                    })
-                  }
+                      quantity:
+                        storageQuantity >= parseInt(e.target.value)
+                          ? parseInt(e.target.value)
+                          : storageQuantity,
+                    });
+                  }}
                   className="input input-bordered w-16 text-center"
                 />
                 <p className="w-24 justify-end flex text-lg text-secondary font-semibold">
@@ -50,13 +59,19 @@ const Cart: React.FC = () => {
         ))}
       </div>
       {productsAtCart.length !== 0 ? (
-        <div className="mt-6">
+        <div className="mt-6 flex items-center justify-between">
           <h2 className="text-xl font-semibold">
             Total: ${calculateTotalPrice()}
           </h2>
           <button
-            className="btn btn-primary mt-4"
-            onClick={() => navigate("/checkout")}
+            className="btn btn-primary items-center"
+            onClick={() => {
+              navigate("/checkout");
+              createRequest({
+                total: calculateTotalPrice().toString(),
+                client_id: "1",
+              });
+            }}
           >
             Checkout
           </button>
