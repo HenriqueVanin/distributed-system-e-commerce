@@ -35,47 +35,36 @@ def publish_event(topic, message):
     except pika.exceptions.UnroutableError:
         print("Erro: Mensagem não foi roteada para a fila!")
     except Exception as e:
-        print("Erro inesperado:", e)
+        print("Erro inesperado no principal:", e)
 
 # Callback para consumo de eventos
-def on_aproved_payment(ch, method, properties, body):
-   #print(f"Mensagem recebida: {body}")
+def on_payment_change(ch, method, properties, body):
     if not body:
-       #print("Corpo vazio!")
+        print("Erro: mensagem vazia recebida no principal")
         return
-
     try:
-        evento = json.loads(body)
+        request = json.loads(body)
+        request_id = request.get("request_id")
+        for req in requests:
+            if req["request_id"] == request_id:
+                req["status"] = request.get("status") 
     except json.JSONDecodeError as e:
-       #print(f"Erro ao decodificar JSON: {e}")
         return
-    request_id = evento.get("request_id")
-    if request_id in requests:
-        requests[request_id]["status"] = "pagamento aprovado"
-       #print(f"request {request_id} atualizado para 'pagamento aprovado'")
+       
 
-def on_reproved_payment(ch, method, properties, body):
-    evento = json.loads(body)
-    request_id = evento.get("request_id")
-    if request_id in requests:
-        requests[request_id]["status"] = "pagamento recusado"
-        publish_event('Pedidos_Excluidos', {"request_id": request_id})
-       #print(f"request {request_id} atualizado para 'pagamento recusado' e publicado no tópico Pedidos_Excluídos")
-
-def on_request_enviado(ch, method, properties, body):
-    evento = json.loads(body)
-    request_id = evento.get("request_id")
-    if request_id in requests:
-        requests[request_id]["status"] = "enviado"
 
 # Consumir eventos
 def consume_events():
     channel = get_channel()
 
-    channel.exchange_declare(exchange='Pedidos_Aprovados', exchange_type=ExchangeType.fanout) 
+    channel.exchange_declare(exchange='Pagamentos_Aprovados', exchange_type=ExchangeType.fanout)
+    channel.exchange_declare(exchange='Pedidos_Enviados', exchange_type=ExchangeType.fanout) 
+    channel.exchange_declare(exchange='Pagamentos_Recusados', exchange_type=ExchangeType.fanout)  
     queue = channel.queue_declare(queue='', exclusive=True)
-    channel.queue_bind(exchange='Pedidos_Aprovados', queue=queue.method.queue)
-    channel.basic_consume(queue=queue.method.queue, on_message_callback=on_aproved_payment, auto_ack=True)
+    channel.queue_bind(exchange='Pagamentos_Aprovados', queue=queue.method.queue)
+    channel.queue_bind(exchange='Pagamentos_Recusados', queue=queue.method.queue)
+    channel.queue_bind(exchange='Pedidos_Enviados', queue=queue.method.queue)
+    channel.basic_consume(queue=queue.method.queue, on_message_callback=on_payment_change, auto_ack=True)
 
     channel.start_consuming()
 

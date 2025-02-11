@@ -6,7 +6,7 @@ import requests
 import pika
 import threading
 import json
-from payment import payment, start_payment_thread
+from payment import payment
 from principal import principal, start_principal_thread
 from storage import storage, start_storage_thread
 from deliver import deliver, start_deliver_thread
@@ -39,13 +39,8 @@ def webhook():
 
     return jsonify({"status": "Mensagem recebida!", "message": message}), 200
 
-# Callback para processar mensagens da fila Pedidos_Criados
-
-
 def start_all_threads():
-    #start_consumer_thread()
     start_principal_thread()
-    start_payment_thread()
     start_deliver_thread()
     start_storage_thread()
     start_webhook_thread()

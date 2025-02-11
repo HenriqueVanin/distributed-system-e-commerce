@@ -16,3 +16,13 @@ export const createRequest = async (request: RequestPayload) => {
 export const removeRequest = async (requestId: string): Promise<void> => {
   await api.delete(`/principal/requests/${requestId}`);
 };
+
+export const updatePayment = async (
+  request: RequestPayload,
+  status: string
+) => {
+  await api.post<RequestPayload>("/payment/webhook", {
+    ...request,
+    status: status,
+  });
+};

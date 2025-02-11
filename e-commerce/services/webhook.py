@@ -18,7 +18,6 @@ def on_request_payment_changed(ch, method, properties, body):
         return 
     try:
         request = json.loads(body)
-        print(request)
         url = 'http://localhost:5000/webhook'
         payload = {
             'message': json.dumps(request)
@@ -34,13 +33,13 @@ def on_request_payment_changed(ch, method, properties, body):
 def consume_pagamentos_requests():
     connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
     channel = connection.channel()
-    channel.exchange_declare(exchange='Pagamentos_Enviados', exchange_type=ExchangeType.fanout)
+    channel.exchange_declare(exchange='Pedidos_Enviados', exchange_type=ExchangeType.fanout)
     channel.exchange_declare(exchange='Pagamentos_Aprovados', exchange_type=ExchangeType.fanout) 
     channel.exchange_declare(exchange='Pagamentos_Recusados', exchange_type=ExchangeType.fanout)
     channel.exchange_declare(exchange='Pedidos_Criados', exchange_type=ExchangeType.fanout) 
     channel.exchange_declare(exchange='Pedidos_Excluidos', exchange_type=ExchangeType.fanout)  
     queue = channel.queue_declare(queue='', exclusive=True)
-    channel.queue_bind(exchange='Pagamentos_Enviados', queue=queue.method.queue)
+    channel.queue_bind(exchange='Pedidos_Enviados', queue=queue.method.queue)
     channel.queue_bind(exchange='Pagamentos_Recusados', queue=queue.method.queue)
     channel.queue_bind(exchange='Pagamentos_Aprovados', queue=queue.method.queue)
     channel.queue_bind(exchange='Pedidos_Criados', queue=queue.method.queue)

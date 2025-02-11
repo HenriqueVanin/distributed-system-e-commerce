@@ -5,44 +5,30 @@ import json
 from flask import Blueprint
 import threading
 from pika.exchange_type import ExchangeType
+import time
 
 deliver = Blueprint('deliver', __name__)
-
-# Simulação de mensagens publicadas em um sistema de mensageria
-# mensageria = {"Pedidos_Enviados": []}
-# fila_pagamentos_aprovados = []
-
 class requestEntrega(BaseModel):
     request_id: str
 
 def on_aproved_payment(ch, method, properties, body):
     pagamento = json.loads(body)
-   #print(f"Pagamento aprovado: {pagamento}")
-    
-    # Simula a emissão de nota e envio do request
-    sent_request = {
-        "request_id": pagamento['request_id'],
-        "status": "enviado",
-        "nota_fiscal": f"NF-{pagamento['request_id']}"
-    }
-
-    # Publica no tópico Pedidos_Enviados
+    time.sleep(2)
     connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
     channel = connection.channel()
-
-    channel.exchange_declare(exchange=topic, exchange_type=ExchangeType.fanout)
+    channel.exchange_declare(exchange='Pedidos_Enviados', exchange_type=ExchangeType.fanout)
     try:
-        # Publica a mensagem
+        pagamento['status'] = "enviado"
         channel.basic_publish(
-            exchange=topic,
+            exchange='Pedidos_Enviados',
             routing_key='',
-            body=json.dumps(message)
+            body=json.dumps(pagamento)
         )
         
     except pika.exceptions.UnroutableError:
         print("Erro: Mensagem não foi roteada para a fila!")
     except Exception as e:
-        print("Erro inesperado:", e)
+        print("Erro inesperado na entrega:", e)
 
 def consume_aproved_payment():
     connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))

@@ -5,7 +5,6 @@ import useProductStore from "../store/product.store";
 
 export const Checkout = () => {
   const { calculateTotalPrice } = useProduct();
-  const { clearCartAction } = useProduct();
   const { clearCart } = useProductStore();
   const navigate = useNavigate();
   return (
@@ -38,7 +37,6 @@ export const Checkout = () => {
             <button
               className="btn btn-primary"
               onClick={() => {
-                clearCartAction();
                 clearCart();
                 navigate("/orders");
               }}

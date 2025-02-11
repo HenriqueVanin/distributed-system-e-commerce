@@ -2,6 +2,7 @@ import {
   createRequest,
   listRequests,
   removeRequest,
+  updatePayment,
 } from "../service/requestService";
 import { Order } from "../service/types";
 import useProductStore from "../store/product.store";
@@ -28,5 +29,11 @@ export const useRequest = () => {
     updateOrders();
   };
 
-  return { removeOrder, updateOrders, createOrder };
+  const updatePaymentAction = async (request: Order, status: string) => {
+    await updatePayment(request, status);
+    triggerToast("Pagamento atualizado com sucesso");
+    updateOrders();
+  };
+
+  return { removeOrder, updateOrders, createOrder, updatePaymentAction };
 };
